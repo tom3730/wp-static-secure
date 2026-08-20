@@ -1,8 +1,8 @@
-# WP Staic Secure
+# WP Static Secure
 
 > Keep WordPress for editing. Remove WordPress from the public web.
 
-WP Staic Secure is an open-source publishing system for WordPress that treats WordPress as an **authoring environment**, not as the public web server.
+WP Static Secure is an open-source publishing system for WordPress that treats WordPress as an **authoring environment**, not as the public web server.
 
 It publishes a static version of a WordPress site, minimizes the public attack surface, and provides the dynamic pieces that static sites actually need — starting with forms and a submission inbox.
 
