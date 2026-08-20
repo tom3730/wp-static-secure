@@ -1,0 +1,106 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2', '8.3', '8.4']
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, libxml, mbstring, xml, xmlwriter
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate Composer metadata
+        run: composer validate --no-check-publish
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Check PHP syntax
+        run: find . -path ./vendor -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Run PHPUnit
+        run: composer test
+
+  wordpress-smoke:
+    name: WordPress activation smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_ROOT_HOST: '%'
+          MYSQL_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP and WP-CLI
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli, mbstring
+          coverage: none
+          tools: composer:v2, wp-cli
+
+      - name: Install plugin dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --no-dev
+
+      - name: Install WordPress
+        env:
+          WP_PATH: /tmp/wordpress
+        run: |
+          wp core download --path="$WP_PATH" --quiet
+          wp config create \
+            --path="$WP_PATH" \
+            --dbname=wordpress \
+            --dbuser=root \
+            --dbpass=root \
+            --dbhost=127.0.0.1:3306 \
+            --skip-check
+          wp core install \
+            --path="$WP_PATH" \
+            --url=http://example.test \
+            --title="WP Static Secure CI" \
+            --admin_user=admin \
+            --admin_password='ci-only-password' \
+            --admin_email=ci@example.test \
+            --skip-email
+          ln -s "$GITHUB_WORKSPACE" "$WP_PATH/wp-content/plugins/wp-static-secure"
+
+      - name: Activate plugin
+        env:
+          WP_PATH: /tmp/wordpress
+        run: |
+          wp plugin activate wp-static-secure --path="$WP_PATH"
+          wp plugin status wp-static-secure --path="$WP_PATH"
