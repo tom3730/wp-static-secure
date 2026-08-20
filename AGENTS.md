@@ -59,6 +59,65 @@ Responsibilities:
 
 The Implementer must not silently change architecture, security boundaries, product principles, or issue acceptance criteria merely to make implementation easier.
 
+### Human maintainer / acceptance testing
+
+This project is intended to be developed primarily by AI agents. Human maintainers are not expected to perform line-by-line code review for every change.
+
+The normal human role is product ownership and acceptance testing:
+
+- decide product direction and unresolved requirements;
+- validate user-visible behavior in a realistic environment;
+- report unexpected behavior or quality concerns as issues;
+- make explicit decisions when the Commander identifies architectural, security, or product trade-offs.
+
+The Commander owns implementation review before a PR is considered ready. The Commander must:
+
+- review the complete diff against the issue acceptance criteria;
+- inspect automated test and CI results;
+- verify that the change remains within issue scope;
+- check relevant `ARCHITECTURE.md` and `SECURITY.md` constraints;
+- identify regression risks and missing tests;
+- reject unrelated changes or undocumented shortcuts;
+- confirm whether any trust boundary changed.
+
+A PR that passes Commander review and required CI does **not** require human line-by-line code review by default.
+
+Before handing a PR to the human maintainer, the Commander should provide a short acceptance checklist describing only the behavior that still benefits from human or runtime verification.
+
+The Commander must stop and request an explicit human decision when a change involves unresolved product requirements or materially changes:
+
+- a documented trust boundary;
+- public-to-private connectivity;
+- authentication or authorization;
+- credential or secret handling;
+- public dynamic endpoints;
+- destructive deployment or synchronization behavior;
+- security guarantees or core project principles.
+
+Human acceptance testing is not a substitute for automated tests. Bugs or unexpected behavior found during acceptance should normally become reproducible issues and regression tests.
+
+The normal delivery flow is:
+
+```text
+Issue
+  ↓
+Commander
+  ↓
+Implementer
+  ↓
+Automated tests / CI
+  ↓
+Commander diff + architecture/security review
+  ↓
+AI review PASS
+  ↓
+Human acceptance test
+  ↓
+Squash merge
+  ↓
+Unexpected behavior → Issue / regression test
+```
+
 ## Model policy and escalation
 
 Both roles use `gpt-5.6-luna` by default. `gpt-5.6-sol` is a deliberate escalation path, not the default implementation model.
