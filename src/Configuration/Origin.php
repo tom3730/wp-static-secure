@@ -32,7 +32,13 @@ final class Origin
         }
 
         $host = strtolower($parts['host']);
-        if ($host === '' || filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) === false && preg_match('/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i', $host) !== 1) {
+        $unwrappedHost = str_starts_with($host, '[') && str_ends_with($host, ']')
+            ? substr($host, 1, -1)
+            : $host;
+        $isIpv6 = filter_var($unwrappedHost, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false;
+        $isDnsHost = preg_match('/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i', $unwrappedHost) === 1;
+
+        if ($unwrappedHost === '' || (!$isIpv6 && !$isDnsHost)) {
             throw new InvalidArgumentException('Origin host is invalid.');
         }
 
@@ -41,7 +47,7 @@ final class Origin
             $port = null;
         }
 
-        $formattedHost = str_contains($host, ':') ? '[' . $host . ']' : $host;
+        $formattedHost = $isIpv6 ? '[' . $unwrappedHost . ']' : $unwrappedHost;
         $this->value = $scheme . '://' . $formattedHost . ($port !== null ? ':' . $port : '');
     }
 
