@@ -118,6 +118,26 @@ Squash merge
 Unexpected behavior → Issue / regression test
 ```
 
+## Routine Git/GitHub delegation
+
+The human maintainer delegates routine issue-development repository operations to the Commander and Implementer. Within an already approved issue or bounded task, agents should proceed without asking for repeated human approval for each routine step when the available tooling and platform policy permit it.
+
+This standing delegation includes:
+
+- creating and using issue or feature branches;
+- staging only files that belong to the approved task;
+- creating implementation, test, documentation, and narrowly scoped corrective commits;
+- pushing those commits to the corresponding non-default branch;
+- responding to ordinary CI failures with bounded fixes and additional tests;
+- applying bounded fixes identified during Commander review and pushing them to the same branch;
+- creating or updating the task's pull request after Commander review and required CI are satisfactory.
+
+This delegation does **not** authorize agents to merge into the default branch. The human maintainer normally performs the final squash merge after acceptance testing.
+
+Agents must still stop for an explicit human decision before repository writes that materially exceed the approved issue scope or involve unresolved product requirements, architecture/security trade-offs, destructive repository operations, force-pushing shared history, deleting branches or releases outside routine post-merge cleanup, or changes to the default branch outside the normal reviewed PR flow.
+
+Tooling, platform, or connector authorization requirements take precedence over this repository policy. If an external tool requires a fresh explicit authorization for a write operation, the agent must request it even though this standing delegation exists.
+
 ## Model policy and escalation
 
 Both roles use `gpt-5.6-luna` by default. `gpt-5.6-sol` is a deliberate escalation path, not the default implementation model.
