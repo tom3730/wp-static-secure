@@ -20,6 +20,95 @@ The public delivery path should be static by default. Dynamic capabilities must 
 
 Read `README.md`, `ARCHITECTURE.md`, and `SECURITY.md` before making architectural changes.
 
+## Agent operating model
+
+Development is intentionally split into two roles: **Commander** and **Implementer**. These roles should normally run in separate agent contexts so implementation work is reviewed from an independent perspective.
+
+### Commander / Tech Lead
+
+Default model: `gpt-5.6-luna`.
+
+Responsibilities:
+
+- own architecture and preserve the project principles;
+- read the relevant issue and repository context before assigning work;
+- decompose issues into bounded implementation tasks when needed;
+- define acceptance criteria, constraints, and required tests;
+- review diffs and test results produced by Implementers;
+- identify security-boundary or architecture changes;
+- reject unrelated refactors or shortcuts that weaken the design;
+- decide whether follow-up work belongs in the current issue or a new issue;
+- escalate difficult reasoning or debugging to `gpt-5.6-sol` when justified.
+
+The Commander should not normally implement feature code. Small documentation changes, issue decomposition, review notes, and narrowly scoped corrective edits are acceptable when they avoid unnecessary handoffs.
+
+### Implementer
+
+Default model: `gpt-5.6-luna`.
+
+Responsibilities:
+
+- work on exactly one assigned issue or explicitly bounded subtask at a time;
+- read the issue plus relevant repository documentation before editing;
+- implement the smallest coherent change that satisfies the assignment;
+- add or update automated tests for meaningful behavior;
+- run the required tests and report exact commands/results;
+- keep the diff free of unrelated changes;
+- document known limitations and runtime validation gaps;
+- stop and escalate when completing the task would require an architectural change.
+
+The Implementer must not silently change architecture, security boundaries, product principles, or issue acceptance criteria merely to make implementation easier.
+
+## Model policy and escalation
+
+Both roles use `gpt-5.6-luna` by default. `gpt-5.6-sol` is a deliberate escalation path, not the default implementation model.
+
+Escalate from Luna to Sol when one or more of the following applies:
+
+- the same material test failure remains unresolved after two reasonable fix attempts;
+- root cause remains unclear after a bounded investigation;
+- the task requires changing `ARCHITECTURE.md`, `SECURITY.md`, or a documented trust boundary;
+- acceptance criteria conflict or imply materially different designs;
+- a bug spans multiple subsystems and cannot be isolated confidently;
+- security-sensitive parsing, URL handling, filesystem mapping, authentication/authorization, form submission, or similar logic has unresolved ambiguity;
+- a race condition, non-deterministic failure, parser edge case, or difficult compatibility problem cannot be solved confidently with Luna;
+- the proposed solution introduces a new public dynamic endpoint, new secret-handling behavior, or a new path from public traffic toward WordPress;
+- the Commander concludes that the cost of another Luna iteration is likely to exceed a Sol escalation.
+
+Do not escalate merely because a task is large. Prefer decomposition first.
+
+When escalating, preserve the context of the failed attempts: include the issue, relevant diff, failing tests/errors, hypotheses already tested, and the exact decision or problem Sol is being asked to resolve.
+
+## Escalation flow
+
+```text
+Issue
+  ↓
+Commander (Luna)
+  ├─ clarify scope
+  ├─ define constraints/tests
+  └─ assign bounded task
+          ↓
+Implementer (Luna)
+  ├─ implement
+  ├─ test
+  └─ report
+          ↓
+Commander review (Luna)
+  ├─ accept / request bounded fix
+  └─ escalate if needed
+          ↓
+        Sol
+  ├─ resolve difficult reasoning/debugging
+  └─ return decision/fix path
+          ↓
+Commander validates architecture
+          ↓
+Implementer completes bounded change
+```
+
+No agent may silently switch architecture to make an implementation easier.
+
 ## Development strategy
 
 - Prefer small, reviewable changes.
@@ -101,6 +190,8 @@ A PR should state:
 
 If runtime testing was impossible, say so explicitly rather than implying success.
 
+The Commander should review each implementation PR against the issue acceptance criteria and the architecture/security documents, not merely whether tests are green.
+
 ## Documentation
 
 Update architecture/security documentation when a change alters:
@@ -121,7 +212,11 @@ Update architecture/security documentation when a change alters:
 - Making SMTP/SES a mandatory dependency.
 - Building a generic public-to-WordPress proxy as a shortcut for dynamic features.
 - Silently ignoring failed resources during builds; failures should be visible and classifiable.
+- Letting an Implementer redefine task scope without Commander review.
+- Repeatedly retrying the same failed approach instead of escalating or decomposing.
 
 ## Definition of done for a task
 
 A task is done when the requested behavior is implemented, tests pass or limitations are documented, generated behavior respects the trust boundaries, documentation is updated when necessary, and the diff contains no unrelated changes.
+
+For agent-produced work, completion also requires Commander review of the implementation result or an explicitly documented reason why that review has not occurred yet.
