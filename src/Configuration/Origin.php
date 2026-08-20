@@ -35,10 +35,12 @@ final class Origin
         $unwrappedHost = str_starts_with($host, '[') && str_ends_with($host, ']')
             ? substr($host, 1, -1)
             : $host;
-        $isIpv6 = filter_var($unwrappedHost, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false;
-        $isDnsHost = preg_match('/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i', $unwrappedHost) === 1;
 
-        if ($unwrappedHost === '' || (!$isIpv6 && !$isDnsHost)) {
+        $isIpv4 = filter_var($unwrappedHost, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false;
+        $isIpv6 = filter_var($unwrappedHost, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false;
+        $isDnsHost = !$isIpv4 && !$isIpv6 && self::isValidDnsHost($unwrappedHost);
+
+        if ($unwrappedHost === '' || (!$isIpv4 && !$isIpv6 && !$isDnsHost)) {
             throw new InvalidArgumentException('Origin host is invalid.');
         }
 
@@ -59,5 +61,25 @@ final class Origin
     public function __toString(): string
     {
         return $this->value;
+    }
+
+    private static function isValidDnsHost(string $host): bool
+    {
+        if (strlen($host) > 253 || preg_match('/^[0-9.]+$/', $host) === 1) {
+            return false;
+        }
+
+        $labels = explode('.', $host);
+        foreach ($labels as $label) {
+            if (
+                $label === ''
+                || strlen($label) > 63
+                || preg_match('/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i', $label) !== 1
+            ) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

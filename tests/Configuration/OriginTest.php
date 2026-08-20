@@ -23,6 +23,7 @@ final class OriginTest extends TestCase
             ['http://example.test:80', 'http://example.test'],
             ['https://example.test:443/', 'https://example.test'],
             ['https://example.test:8443', 'https://example.test:8443'],
+            ['https://127.0.0.1:8443', 'https://127.0.0.1:8443'],
             ['https://[2001:db8::1]:8443', 'https://[2001:db8::1]:8443'],
         ];
     }
@@ -44,6 +45,11 @@ final class OriginTest extends TestCase
             ['https://example.test/?query=1'],
             ['https://example.test/#fragment'],
             ['https://-bad.example'],
+            ['https://bad-.example'],
+            ['https://example..test'],
+            ['https://foo.-bar.test'],
+            ['https://foo-.bar.test'],
+            ['https://999.999.999.999'],
         ];
     }
 }
