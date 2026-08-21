@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace WPStaticSecure\Fetching;
 
 use InvalidArgumentException;
+use WPStaticSecure\Assets\AssetExporter;
+use WPStaticSecure\Assets\HtmlAssetProcessor;
 use WPStaticSecure\Discovery\CrawlScope;
 use WPStaticSecure\Discovery\UrlNormalizer;
 
@@ -15,10 +17,20 @@ final class PageExporter
         private CrawlScope $scope,
         private FilesystemPageStore $store,
         private ?OutputPathMapper $mapper = null,
-        private ?UrlNormalizer $normalizer = null
+        private ?UrlNormalizer $normalizer = null,
+        private ?HtmlAssetProcessor $htmlProcessor = null,
+        private ?AssetExporter $assetExporter = null,
+        private ?string $publicOrigin = null
     ) {
         $this->mapper ??= new OutputPathMapper();
         $this->normalizer ??= new UrlNormalizer();
+
+        if (($this->htmlProcessor !== null || $this->assetExporter !== null) && $this->publicOrigin === null) {
+            throw new InvalidArgumentException('Public origin is required when asset processing is enabled.');
+        }
+        if (($this->htmlProcessor === null) !== ($this->assetExporter === null)) {
+            throw new InvalidArgumentException('HTML and asset processors must be enabled together.');
+        }
     }
 
     /**
@@ -29,6 +41,7 @@ final class PageExporter
     {
         $results = [];
         $manifest = [];
+        $assetUrls = [];
 
         foreach ($urls as $candidate) {
             try {
@@ -59,7 +72,28 @@ final class PageExporter
 
             $statusCode = $response->statusCode();
             if ($statusCode >= 200 && $statusCode < 300) {
-                $this->store->write($outputPath, $response->body());
+                $body = $response->body();
+                $contentType = strtolower((string) $response->firstHeader('content-type'));
+
+                if ($this->htmlProcessor !== null && str_starts_with($contentType, 'text/html')) {
+                    try {
+                        $processed = $this->htmlProcessor->process(
+                            $body,
+                            $url,
+                            $this->scope->origin(),
+                            (string) $this->publicOrigin
+                        );
+                    } catch (InvalidArgumentException $e) {
+                        $results[] = ['url' => $url, 'status' => 'processing_error', 'message' => $e->getMessage()];
+                        continue;
+                    }
+                    $body = $processed->body();
+                    foreach ($processed->assetUrls() as $assetUrl) {
+                        $assetUrls[] = $assetUrl;
+                    }
+                }
+
+                $this->store->write($outputPath, $body);
                 $entry = [
                     'url' => $url,
                     'output_path' => $outputPath,
@@ -82,6 +116,10 @@ final class PageExporter
             }
 
             $results[] = ['url' => $url, 'status' => 'http_error', 'status_code' => $statusCode];
+        }
+
+        if ($this->assetExporter !== null && $assetUrls !== []) {
+            array_push($results, ...$this->assetExporter->export($assetUrls, (string) $this->publicOrigin));
         }
 
         $this->store->writeManifest($manifest);
