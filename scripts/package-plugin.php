@@ -2,12 +2,6 @@
 
 declare(strict_types=1);
 
-use FilesystemIterator;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use RuntimeException;
-use ZipArchive;
-
 const PACKAGE_DIRECTORY = 'wp-static-secure';
 const FIXED_ZIP_MTIME = 315532800; // 1980-01-01T00:00:00Z, the ZIP epoch.
 
@@ -57,6 +51,10 @@ try {
 
 function runComposerInstall(string $workingDirectory): void
 {
+    if (!function_exists('proc_open')) {
+        throw new RuntimeException('proc_open() is required to prepare Composer runtime dependencies.');
+    }
+
     $command = [
         'composer',
         'install',
