@@ -55,7 +55,7 @@ final class FilesystemPageStore
     /** @param list<array<string, mixed>> $entries */
     public function writeManifest(array $entries): void
     {
-        usort($entries, static fn (array $a, array $b): int => strcmp((string) $a['url'], (string) $b['url']));
+        usort($entries, static fn (array $a, array $b): int => strcmp((string) $a['output_path'], (string) $b['output_path']));
         $json = json_encode(['pages' => $entries], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";
         $this->write('.wp-static-secure/manifest.json', $json);
     }

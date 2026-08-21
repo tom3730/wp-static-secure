@@ -79,8 +79,9 @@ final class PageExporterTest extends TestCase
         self::assertSame(404, $results[3]['status_code']);
 
         $manifest = json_decode((string) file_get_contents($this->dist . '/.wp-static-secure/manifest.json'), true, 512, JSON_THROW_ON_ERROR);
-        self::assertSame(['https://wp.example/', 'https://wp.example/about/'], array_column($manifest['pages'], 'url'));
-        self::assertSame(['index.html', 'about/index.html'], array_column($manifest['pages'], 'output_path'));
+        self::assertSame(['about/index.html', 'index.html'], array_column($manifest['pages'], 'output_path'));
+        self::assertArrayNotHasKey('url', $manifest['pages'][0]);
+        self::assertArrayNotHasKey('url', $manifest['pages'][1]);
     }
 
     public function testUnsafeNormalizedPathCannotEscapeOutputDirectory(): void
