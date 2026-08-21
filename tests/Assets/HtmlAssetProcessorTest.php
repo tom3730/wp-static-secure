@@ -22,6 +22,7 @@ final class HtmlAssetProcessorTest extends TestCase
 </head><body>
 <img src="/uploads/photo.jpg" srcset="/uploads/photo-320.jpg 320w, https://wp.example/uploads/photo-640.jpg 640w">
 <a href="https://wp.example/about/">About</a>
+<a href="//wp.example/protocol-relative/">Protocol relative</a>
 <a href="/files/guide.pdf">Guide</a>
 </body></html>
 HTML;
@@ -40,10 +41,12 @@ HTML;
         self::assertStringContainsString('https://www.example.com/wp-content/theme.css?ver=1', $result->body());
         self::assertStringContainsString('https://www.example.com/posts/one/', $result->body());
         self::assertStringContainsString('https://www.example.com/about/', $result->body());
+        self::assertStringContainsString('//www.example.com/protocol-relative/', $result->body());
         self::assertStringContainsString('https://www.example.com/uploads/hero.jpg', $result->body());
         self::assertStringContainsString('https://www.example.com/uploads/photo-640.jpg 640w', $result->body());
         self::assertStringContainsString('https://cdn.example/library.js', $result->body());
         self::assertStringNotContainsString('https://wp.example/', $result->body());
+        self::assertStringNotContainsString('//wp.example/', $result->body());
     }
 
     public function testRelativeAndExternalReferencesAreNotNeedlesslyRewritten(): void
