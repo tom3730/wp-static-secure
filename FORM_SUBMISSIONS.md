@@ -50,6 +50,28 @@ The included `JsonlSubmissionStore` is a minimal local/test storage implementati
 
 Notifications are intentionally absent from the core endpoint. A submission is considered accepted only after the store succeeds. Future notification integrations must consume already-persisted submissions so notification failure cannot erase or invalidate accepted submission data.
 
+## WordPress Submission Inbox
+
+For the MVP, `WordPressSubmissionStore` is the WordPress-managed system of record. Plugin activation creates a dedicated `{prefix}wpss_submissions` table containing only:
+
+- an internal numeric submission id;
+- form identifier;
+- normalized submitted fields as JSON;
+- status (`new`, `in_progress`, `done`, or `spam`);
+- UTC submission time.
+
+IP address, User-Agent, referrer, cookies, and other request metadata are not stored by default.
+
+The WordPress admin Inbox is available under **Tools → Submission Inbox**. Viewing and status changes require the `manage_options` capability. Status changes use WordPress nonces in addition to the capability check. Submission values are escaped before rendering in the admin UI.
+
+No anonymous WordPress REST route, AJAX action, or other public WordPress endpoint is created for the Inbox. A Phase 7 `SubmissionEndpoint` can persist through `WordPressSubmissionStore` when executed in an explicitly designed trusted runtime, but the Inbox must not be used as a shortcut that proxies anonymous public traffic into WordPress.
+
+## Retention and export
+
+Submission retention is a deployment policy because form contents may contain personal or confidential data. The MVP does not silently delete submissions and does not impose a universal retention period. Operators should define a retention period appropriate to the form purpose, legal obligations, and backup policy. Future automated retention should be explicit, configurable, and auditable.
+
+The MVP also does not provide a bulk export endpoint. A future export feature should require the same or stronger capability than Inbox access, escape spreadsheet-dangerous values where CSV is used, avoid anonymous download URLs, and document whether deleted submissions remain in backups. Direct database export remains an operator responsibility until that feature exists.
+
 ## Origin, CORS, and CSRF decision
 
 The initial endpoint requires an exact HTTP(S) `Origin` match against a configured allowlist. Missing, malformed, or unapproved origins are rejected. This is the initial browser CSRF boundary for cross-site form posts.
@@ -62,4 +84,4 @@ Origin validation is one layer, not a universal CSRF solution. Deployments that 
 
 Rate limiting and spam classification are required production concerns but are not implemented as hidden behavior in the generic adapter. A public HTTP transport must apply bounded request-size limits and rate limiting before calling `SubmissionEndpoint`. Spam controls should classify or quarantine persisted submissions without turning the endpoint into a WordPress proxy.
 
-The current local/test boundary therefore provides schema validation, origin enforcement, normalized storage, and separation from notification delivery. Production HTTP transport, distributed rate limiting, spam scoring, inbox workflow, and third-party form-plugin adapters remain follow-up work.
+The current boundary therefore provides schema validation, origin enforcement, normalized storage, an authenticated WordPress Inbox, and separation from notification delivery. Production HTTP transport, distributed rate limiting, spam scoring automation, bulk export, retention automation, and third-party form-plugin adapters remain follow-up work.
