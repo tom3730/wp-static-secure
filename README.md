@@ -88,21 +88,32 @@ See [SECURITY.md](SECURITY.md).
 
 ## Initial scope
 
-The first useful release should focus on content-oriented WordPress sites such as corporate sites, blogs, news sites, landing pages, documentation, and recruiting sites.
+The first useful release focuses on content-oriented WordPress sites such as corporate sites, blogs, news sites, landing pages, documentation, and recruiting sites.
 
-### MVP
+### Implemented MVP core
 
-- Discover public WordPress URLs.
-- Fetch and export pages as static HTML.
-- Download required CSS, JavaScript, images, fonts, PDFs, and related assets.
-- Rewrite internal URLs for the public static site.
-- Handle common responsive image references such as `srcset`.
-- Produce a deterministic local output directory.
-- Detect supported WordPress forms.
-- Convert supported forms to static-compatible submissions.
-- Store submissions independently of email delivery.
-- Provide a WordPress-admin Inbox for submissions.
-- Provide a CLI-friendly architecture suitable for automation.
+The current pre-alpha implementation includes the core local publishing and form-submission path:
+
+- configuration for authoring origin, public origin, and local output directory;
+- normalized URL discovery with configured crawl-scope boundaries;
+- HTTP page fetching and deterministic static HTML persistence;
+- discovery and export of common HTML/CSS assets, including responsive `srcset` references;
+- rewriting of authoring-site URLs to the configured public site;
+- deterministic build validation for private-origin leaks, broken local references, unsupported WordPress dynamic paths, and supported-form output;
+- an explicit form-adapter boundary with an opt-in generic HTML form adapter;
+- rewriting supported forms to a configured absolute HTTP(S) submission endpoint;
+- a bounded `POST` / `application/x-www-form-urlencoded` submission transport with request-size and exact-Origin validation;
+- schema-constrained form submission and durable submission storage;
+- a WordPress-managed Submission Inbox with authenticated administration and submission status changes;
+- CLI-oriented build validation and automated PHPUnit / WordPress activation coverage.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) and [FORM_SUBMISSIONS.md](FORM_SUBMISSIONS.md) for the implemented boundaries and current form behavior.
+
+### Remaining before a first broadly promoted release
+
+The MVP core being implemented does **not** mean the project is production-ready. Before a broadly promoted release, remaining work includes hardening, realistic end-to-end deployment validation, clearer installation/operator workflows, release packaging and licensing, private vulnerability reporting, and explicit documentation of supported compatibility cases.
+
+Deployment-specific controls also remain operator responsibilities where documented, including restricting WordPress itself and applying rate limiting in front of the public form transport.
 
 ### Not an initial goal
 
@@ -114,13 +125,15 @@ The first useful release should focus on content-oriented WordPress sites such a
 
 ## Longer-term direction
 
-Potential capabilities include incremental builds, WP-CLI, S3-compatible deployment, rsync/SFTP, Git-based publishing, CDN invalidation, static search, form adapters, webhooks, integrity manifests, deployment verification, and security records.
+Potential capabilities include incremental builds, WP-CLI, S3-compatible deployment, rsync/SFTP, Git-based publishing, CDN invalidation, static search, additional form adapters, webhooks, integrity manifests, deployment verification, and security records.
 
 The project should remain modular: static publishing is the core; dynamic capabilities are explicit adapters.
 
 ## Status
 
-**Pre-alpha.** Architecture and MVP are being defined before implementation.
+**Pre-alpha.** The initial MVP core is implemented and covered by automated tests, including the local static build pipeline, build validation, the opt-in generic form flow, the bounded public form submission transport, and the WordPress Submission Inbox.
+
+The project is still under active development and should not yet be presented as production-ready or broadly compatible with arbitrary WordPress sites, plugins, themes, or hosting environments. Compatibility claims should be based on repeatable tests or documented verification.
 
 ## License
 
