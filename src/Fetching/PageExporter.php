@@ -94,13 +94,11 @@ final class PageExporter
                 }
 
                 $this->store->write($outputPath, $body);
-                $entry = [
-                    'url' => $url,
+                $manifest[] = [
                     'output_path' => $outputPath,
                     'status_code' => $statusCode,
                     'content_type' => $response->firstHeader('content-type'),
                 ];
-                $manifest[] = $entry;
                 $results[] = ['url' => $url, 'status' => 'written', 'output_path' => $outputPath, 'status_code' => $statusCode];
                 continue;
             }
