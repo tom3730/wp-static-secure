@@ -18,7 +18,7 @@ final class Plugin
             return;
         }
 
-        SubmissionTable::maybeInstall();
+        add_action('admin_init', [SubmissionTable::class, 'maybeInstall']);
 
         global $wpdb;
         if (!is_object($wpdb)) {
