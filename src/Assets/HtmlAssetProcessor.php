@@ -93,6 +93,14 @@ final class HtmlAssetProcessor
             }
         }
 
+        foreach (['href', 'src', 'action', 'poster', 'data'] as $attribute) {
+            foreach ($xpath->query('//*[@' . $attribute . ']') ?: [] as $node) {
+                if ($node instanceof DOMElement) {
+                    $node->setAttribute($attribute, $this->rewriteAuthoringOrigin($node->getAttribute($attribute), $authoringOrigin, $publicOrigin));
+                }
+            }
+        }
+
         $body = $document->saveHTML();
         if ($body === false) {
             throw new InvalidArgumentException('Unable to serialize HTML document.');
