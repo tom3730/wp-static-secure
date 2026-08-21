@@ -65,6 +65,19 @@ final class SubmissionEndpointTest extends TestCase
         $endpoint->submit(['_wpss_form_id' => 'contact', 'email' => 'a@example.test'], 'https://evil.example');
     }
 
+    public function testMalformedOriginIsRejectedAsSubmissionValidationFailure(): void
+    {
+        [$adapter, $definition] = $this->route();
+        $endpoint = new SubmissionEndpoint(
+            new JsonlSubmissionStore($this->path),
+            ['https://www.example.com'],
+            [['adapter' => $adapter, 'definition' => $definition]]
+        );
+
+        $this->expectException(SubmissionValidationException::class);
+        $endpoint->submit(['_wpss_form_id' => 'contact', 'email' => 'a@example.test'], 'not-an-origin');
+    }
+
     public function testUnknownFormIdentifierIsRejectedWithoutStorage(): void
     {
         [$adapter, $definition] = $this->route();

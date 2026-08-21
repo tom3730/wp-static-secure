@@ -37,7 +37,12 @@ final class SubmissionEndpoint
     /** @param array<string, mixed> $payload */
     public function submit(array $payload, ?string $origin): Submission
     {
-        if ($origin === null || !in_array($this->normalizeOrigin($origin), $this->allowedOrigins, true)) {
+        try {
+            $normalizedOrigin = $origin === null ? null : $this->normalizeOrigin($origin);
+        } catch (InvalidArgumentException) {
+            throw new SubmissionValidationException('Submission origin is malformed.');
+        }
+        if ($normalizedOrigin === null || !in_array($normalizedOrigin, $this->allowedOrigins, true)) {
             throw new SubmissionValidationException('Submission origin is not allowed.');
         }
 
