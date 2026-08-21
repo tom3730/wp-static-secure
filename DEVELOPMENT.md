@@ -33,6 +33,32 @@ On Unix-like systems:
 find . -path ./vendor -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 
+## Build an installable plugin ZIP
+
+From a clean checkout, with Composer 2 and the PHP `zip` extension available:
+
+```bash
+php scripts/package-plugin.php
+```
+
+The default artifact is written to:
+
+```text
+build/wp-static-secure.zip
+```
+
+An alternate output path may be supplied as the first argument.
+
+Packaging is allowlist-based. The ZIP contains the plugin bootstrap, `src/`, runtime CLI files in `bin/`, `composer.json`, and the production `vendor/` tree prepared with `composer install --no-dev --classmap-authoritative`. Development-only material such as `.git`, `.github/`, `tests/`, `scripts/`, PHPUnit configuration, development documentation, and local build output is not copied into the package.
+
+Verify a package explicitly with:
+
+```bash
+php scripts/verify-package.php build/wp-static-secure.zip
+```
+
+The packaging script sorts archive entries and normalizes ZIP timestamps. CI builds the same source tree twice and requires the resulting ZIP files to compare byte-for-byte equal before the artifact is accepted.
+
 ## Validate a generated build
 
 After exporting a site, validate the generated output before publishing it:
@@ -53,11 +79,4 @@ The automated acceptance test performs the same architectural check with a repre
 
 ## WordPress activation smoke test
 
-With the repository installed as `wp-content/plugins/wp-static-secure` and Composer dependencies installed:
-
-```bash
-wp plugin activate wp-static-secure
-wp plugin status wp-static-secure
-```
-
-The GitHub Actions `wordpress-smoke` job provisions WordPress and MySQL, installs this repository as a plugin, and executes the same activation check automatically.
+The GitHub Actions `wordpress-smoke` job builds `build/wp-static-secure.zip`, verifies its contents and reproducibility, installs that ZIP into a real WordPress instance with WP-CLI, activates it, and runs the submission-to-Inbox smoke check against the packaged plugin. CI no longer relies on a symlink to the development checkout for activation coverage.
