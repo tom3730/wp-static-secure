@@ -97,9 +97,10 @@ final class StaticOnlyAcceptanceTest extends TestCase
         fclose($socket);
         $port = (int) substr((string) $name, (int) strrpos((string) $name, ':') + 1);
 
+        $router = dirname(__DIR__) . '/Fixtures/static-only-router.php';
         $pipes = [];
         $process = proc_open(
-            [PHP_BINARY, '-S', '127.0.0.1:' . $port, '-t', $this->dist],
+            [PHP_BINARY, '-S', '127.0.0.1:' . $port, '-t', $this->dist, $router],
             [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
             $pipes
         );
