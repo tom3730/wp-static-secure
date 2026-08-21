@@ -9,6 +9,7 @@ use WPStaticSecure\Assets\AssetExporter;
 use WPStaticSecure\Assets\HtmlAssetProcessor;
 use WPStaticSecure\Discovery\CrawlScope;
 use WPStaticSecure\Discovery\UrlNormalizer;
+use WPStaticSecure\Forms\FormProcessor;
 
 final class PageExporter
 {
@@ -20,7 +21,8 @@ final class PageExporter
         private ?UrlNormalizer $normalizer = null,
         private ?HtmlAssetProcessor $htmlProcessor = null,
         private ?AssetExporter $assetExporter = null,
-        private ?string $publicOrigin = null
+        private ?string $publicOrigin = null,
+        private ?FormProcessor $formProcessor = null
     ) {
         $this->mapper ??= new OutputPathMapper();
         $this->normalizer ??= new UrlNormalizer();
@@ -75,21 +77,32 @@ final class PageExporter
                 $body = $response->body();
                 $contentType = strtolower((string) $response->firstHeader('content-type'));
 
-                if ($this->htmlProcessor !== null && str_starts_with($contentType, 'text/html')) {
-                    try {
-                        $processed = $this->htmlProcessor->process(
-                            $body,
-                            $url,
-                            $this->scope->origin(),
-                            (string) $this->publicOrigin
-                        );
-                    } catch (InvalidArgumentException $e) {
-                        $results[] = ['url' => $url, 'status' => 'processing_error', 'message' => $e->getMessage()];
-                        continue;
+                if (str_starts_with($contentType, 'text/html')) {
+                    if ($this->htmlProcessor !== null) {
+                        try {
+                            $processed = $this->htmlProcessor->process(
+                                $body,
+                                $url,
+                                $this->scope->origin(),
+                                (string) $this->publicOrigin
+                            );
+                        } catch (InvalidArgumentException $e) {
+                            $results[] = ['url' => $url, 'status' => 'processing_error', 'message' => $e->getMessage()];
+                            continue;
+                        }
+                        $body = $processed->body();
+                        foreach ($processed->assetUrls() as $assetUrl) {
+                            $assetUrls[] = $assetUrl;
+                        }
                     }
-                    $body = $processed->body();
-                    foreach ($processed->assetUrls() as $assetUrl) {
-                        $assetUrls[] = $assetUrl;
+
+                    if ($this->formProcessor !== null) {
+                        try {
+                            $body = $this->formProcessor->rewriteHtml($body);
+                        } catch (InvalidArgumentException $e) {
+                            $results[] = ['url' => $url, 'status' => 'processing_error', 'message' => $e->getMessage()];
+                            continue;
+                        }
                     }
                 }
 
