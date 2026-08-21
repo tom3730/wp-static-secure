@@ -52,6 +52,23 @@ final class SubmissionEndpointTest extends TestCase
         self::assertSame($submission->toArray(), $record);
     }
 
+    public function testValidOriginWithExplicitPortIsAccepted(): void
+    {
+        [$adapter, $definition] = $this->route();
+        $endpoint = new SubmissionEndpoint(
+            new JsonlSubmissionStore($this->path),
+            ['https://www.example.com:8443'],
+            [['adapter' => $adapter, 'definition' => $definition]]
+        );
+
+        $submission = $endpoint->submit([
+            '_wpss_form_id' => 'contact',
+            'email' => 'a@example.test',
+        ], 'https://www.example.com:8443');
+
+        self::assertSame('contact', $submission->formId());
+    }
+
     public function testOriginMustBeExplicitlyAllowed(): void
     {
         [$adapter, $definition] = $this->route();
@@ -65,7 +82,23 @@ final class SubmissionEndpointTest extends TestCase
         $endpoint->submit(['_wpss_form_id' => 'contact', 'email' => 'a@example.test'], 'https://evil.example');
     }
 
-    public function testMalformedOriginIsRejectedAsSubmissionValidationFailure(): void
+    public function testOriginPortMustMatchExactly(): void
+    {
+        [$adapter, $definition] = $this->route();
+        $endpoint = new SubmissionEndpoint(
+            new JsonlSubmissionStore($this->path),
+            ['https://www.example.com:8443'],
+            [['adapter' => $adapter, 'definition' => $definition]]
+        );
+
+        $this->expectException(SubmissionValidationException::class);
+        $endpoint->submit(['_wpss_form_id' => 'contact', 'email' => 'a@example.test'], 'https://www.example.com');
+    }
+
+    /**
+     * @dataProvider malformedOriginProvider
+     */
+    public function testMalformedOriginIsRejectedAsSubmissionValidationFailure(string $origin): void
     {
         [$adapter, $definition] = $this->route();
         $endpoint = new SubmissionEndpoint(
@@ -74,8 +107,26 @@ final class SubmissionEndpointTest extends TestCase
             [['adapter' => $adapter, 'definition' => $definition]]
         );
 
-        $this->expectException(SubmissionValidationException::class);
-        $endpoint->submit(['_wpss_form_id' => 'contact', 'email' => 'a@example.test'], 'not-an-origin');
+        try {
+            $endpoint->submit(['_wpss_form_id' => 'contact', 'email' => 'a@example.test'], $origin);
+            self::fail('Expected malformed origin to be rejected.');
+        } catch (SubmissionValidationException) {
+            self::assertFileDoesNotExist($this->path);
+        }
+    }
+
+    /** @return array<string, array{string}> */
+    public static function malformedOriginProvider(): array
+    {
+        return [
+            'username' => ['https://user@www.example.com'],
+            'username and password' => ['https://user:secret@www.example.com'],
+            'query string' => ['https://www.example.com?foo=bar'],
+            'fragment' => ['https://www.example.com#fragment'],
+            'unsupported scheme' => ['ftp://www.example.com'],
+            'missing absolute origin' => ['not-an-origin'],
+            'path' => ['https://www.example.com/contact'],
+        ];
     }
 
     public function testUnknownFormIdentifierIsRejectedWithoutStorage(): void
