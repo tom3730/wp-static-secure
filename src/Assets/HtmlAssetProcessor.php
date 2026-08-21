@@ -159,12 +159,31 @@ final class HtmlAssetProcessor
 
     private function rewriteAuthoringOrigin(string $reference, string $authoringOrigin, string $publicOrigin): string
     {
-        if ($reference === $authoringOrigin) {
-            return $publicOrigin;
+        $pattern = '~^' . preg_quote($authoringOrigin, '~') . '(?=[/?#]|$)~i';
+        if (preg_match($pattern, $reference) === 1) {
+            return preg_replace($pattern, $publicOrigin, $reference, 1) ?? $reference;
         }
-        if (str_starts_with($reference, $authoringOrigin . '/')) {
-            return $publicOrigin . substr($reference, strlen($authoringOrigin));
+
+        $authoringParts = parse_url($authoringOrigin);
+        $publicParts = parse_url($publicOrigin);
+        if ($authoringParts === false || $publicParts === false || !isset($authoringParts['host'], $publicParts['host'])) {
+            return $reference;
         }
+
+        $authoringAuthority = '//' . strtolower((string) $authoringParts['host']);
+        if (isset($authoringParts['port'])) {
+            $authoringAuthority .= ':' . $authoringParts['port'];
+        }
+        $publicAuthority = '//' . strtolower((string) $publicParts['host']);
+        if (isset($publicParts['port'])) {
+            $publicAuthority .= ':' . $publicParts['port'];
+        }
+
+        $authorityPattern = '~^' . preg_quote($authoringAuthority, '~') . '(?=[/?#]|$)~i';
+        if (preg_match($authorityPattern, $reference) === 1) {
+            return preg_replace($authorityPattern, $publicAuthority, $reference, 1) ?? $reference;
+        }
+
         return $reference;
     }
 
