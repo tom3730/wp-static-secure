@@ -16,6 +16,24 @@ The recommended model is:
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for trust boundaries.
 
+## Public form submission boundary
+
+The MVP form transport is an explicit exception to static-only delivery. It is not a general application gateway.
+
+A conforming deployment exposes only the configured form-submission route and must preserve these controls before untrusted data reaches submission storage:
+
+- accept only `POST` requests using the supported form content type;
+- enforce a bounded request size;
+- require an exact configured HTTP(S) `Origin`;
+- reject malformed, duplicate, unknown, or non-scalar form fields;
+- route only known form identifiers through their registered schema/adapter;
+- apply deployment-level request rate limiting before the core transport;
+- never add arbitrary request forwarding to WordPress.
+
+Generated forms must not contain API secrets, private credentials, privileged WordPress nonces, or administrative endpoints. The core HTTP transport intentionally returns coarse validation errors and does not enable wildcard CORS.
+
+If a deployment stores submissions in the WordPress-managed Inbox, the trusted runtime may reach the submission-storage boundary, but anonymous public traffic must still not gain general HTTP access to WordPress.
+
 ## Recommended architecture incidents
 
 If a site is compromised while following the documented recommended architecture, we want to understand why.
