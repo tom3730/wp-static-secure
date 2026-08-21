@@ -80,15 +80,16 @@ jobs:
           tools: composer:v2, wp-cli
 
       - name: Build installable plugin package
-        run: php scripts/package-plugin.php build/wp-static-secure.zip
+        run: php scripts/package-plugin.php
 
       - name: Verify package contents
         run: php scripts/verify-package.php build/wp-static-secure.zip
 
       - name: Verify repeated package build is deterministic
         run: |
-          php scripts/package-plugin.php build/wp-static-secure-second.zip
-          cmp build/wp-static-secure.zip build/wp-static-secure-second.zip
+          cp build/wp-static-secure.zip /tmp/wp-static-secure-first.zip
+          php scripts/package-plugin.php
+          cmp /tmp/wp-static-secure-first.zip build/wp-static-secure.zip
 
       - name: Upload plugin package artifact
         uses: actions/upload-artifact@v4
