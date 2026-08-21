@@ -61,7 +61,14 @@ final class SubmissionEndpoint
     private function normalizeOrigin(string $origin): string
     {
         $parts = parse_url($origin);
-        if (!is_array($parts) || !isset($parts['scheme'], $parts['host']) || isset($parts['user'], $parts['pass'], $parts['query'], $parts['fragment'])) {
+        if (
+            !is_array($parts)
+            || !isset($parts['scheme'], $parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+        ) {
             throw new InvalidArgumentException('Allowed origins must be absolute HTTP(S) origins.');
         }
         $scheme = strtolower((string) $parts['scheme']);
