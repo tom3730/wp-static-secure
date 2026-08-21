@@ -7,13 +7,13 @@ use WPStaticSecure\Validation\BuildValidator;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-if ($argc !== 4) {
-    fwrite(STDERR, "Usage: php bin/validate-build.php <output-dir> <authoring-origin> <public-origin>\n");
+if ($argc < 4 || $argc > 5) {
+    fwrite(STDERR, "Usage: php bin/validate-build.php <output-dir> <authoring-origin> <public-origin> [submission-endpoint]\n");
     exit(2);
 }
 
 try {
-    $report = (new BuildValidator($argv[1], $argv[2], $argv[3]))->validate();
+    $report = (new BuildValidator($argv[1], $argv[2], $argv[3], $argv[4] ?? null))->validate();
 } catch (Throwable $e) {
     fwrite(STDERR, 'Validation could not run: ' . $e->getMessage() . "\n");
     exit(2);

@@ -11,23 +11,29 @@ use FilesystemIterator;
 use InvalidArgumentException;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use WPStaticSecure\Forms\GenericHtmlFormAdapter;
 
 final class BuildValidator
 {
     private string $outputDirectory;
     private string $authoringOrigin;
     private string $publicOrigin;
+    private ?string $submissionEndpoint;
 
-    public function __construct(string $outputDirectory, string $authoringOrigin, string $publicOrigin)
+    public function __construct(string $outputDirectory, string $authoringOrigin, string $publicOrigin, ?string $submissionEndpoint = null)
     {
         $root = realpath($outputDirectory);
         if ($root === false || !is_dir($root)) {
             throw new InvalidArgumentException('Build validation requires an existing output directory.');
         }
+        if ($submissionEndpoint !== null && !$this->isAbsoluteHttpUrl($submissionEndpoint)) {
+            throw new InvalidArgumentException('Submission endpoint must be an absolute HTTP(S) URL.');
+        }
 
         $this->outputDirectory = rtrim($root, DIRECTORY_SEPARATOR);
         $this->authoringOrigin = rtrim($authoringOrigin, '/');
         $this->publicOrigin = rtrim($publicOrigin, '/');
+        $this->submissionEndpoint = $submissionEndpoint;
     }
 
     public function validate(): ValidationReport
@@ -102,7 +108,7 @@ final class BuildValidator
         }
 
         foreach ($xpath->query('//form') ?: [] as $node) {
-            if (!$node instanceof DOMElement) {
+            if (!$node instanceof DOMElement || $this->isSupportedForm($node)) {
                 continue;
             }
             $action = trim($node->getAttribute('action'));
@@ -111,7 +117,7 @@ final class BuildValidator
                 'unsupported_dynamic_behavior',
                 $relativeFile,
                 $action !== '' ? $action : null,
-                'Form behavior is dynamic and is not supported by the static-only MVP yet.'
+                'Form behavior is dynamic and is not recognized as a supported WP Static Secure form.'
             );
         }
 
@@ -156,6 +162,37 @@ final class BuildValidator
         if (!is_file($this->outputDirectory . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $localPath))) {
             $issues[] = $this->issue('error', 'broken_local_reference', $relativeFile, $reference, 'Referenced local static output is missing.');
         }
+    }
+
+    private function isSupportedForm(DOMElement $form): bool
+    {
+        if ($this->submissionEndpoint === null || !$form->hasAttribute(GenericHtmlFormAdapter::FORM_ATTRIBUTE)) {
+            return false;
+        }
+
+        $formId = trim($form->getAttribute(GenericHtmlFormAdapter::FORM_ATTRIBUTE));
+        if (preg_match('/^[a-z][a-z0-9_-]{0,63}$/', $formId) !== 1) {
+            return false;
+        }
+        if (strcasecmp(trim($form->getAttribute('method')), 'post') !== 0) {
+            return false;
+        }
+        if (trim($form->getAttribute('action')) !== $this->submissionEndpoint) {
+            return false;
+        }
+
+        foreach ($form->getElementsByTagName('input') as $input) {
+            if (!$input instanceof DOMElement) {
+                continue;
+            }
+            if ($input->getAttribute('name') !== GenericHtmlFormAdapter::FORM_ID_FIELD) {
+                continue;
+            }
+            return strcasecmp(trim($input->getAttribute('type')), 'hidden') === 0
+                && $input->getAttribute('value') === $formId;
+        }
+
+        return false;
     }
 
     private function localPathForReference(string $relativeFile, string $reference): ?string
@@ -231,6 +268,17 @@ final class BuildValidator
         return strcasecmp((string) ($urlParts['scheme'] ?? ''), (string) ($originParts['scheme'] ?? '')) === 0
             && strcasecmp((string) ($urlParts['host'] ?? ''), (string) ($originParts['host'] ?? '')) === 0
             && $urlPort === $originPort;
+    }
+
+    private function isAbsoluteHttpUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+        return is_array($parts)
+            && in_array(strtolower((string) ($parts['scheme'] ?? '')), ['http', 'https'], true)
+            && isset($parts['host'])
+            && $parts['host'] !== ''
+            && !isset($parts['user'])
+            && !isset($parts['pass']);
     }
 
     private function isTextOutput(string $extension): bool

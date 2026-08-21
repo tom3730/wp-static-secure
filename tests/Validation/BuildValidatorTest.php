@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WPStaticSecure\Tests\Validation;
 
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use WPStaticSecure\Validation\BuildValidator;
 
@@ -52,6 +53,89 @@ HTML);
 
         self::assertTrue($report->isSuccessful());
         self::assertSame([], $report->issues());
+    }
+
+    public function testAcceptsCorrectlyRewrittenSupportedForm(): void
+    {
+        file_put_contents($this->dist . '/index.html', <<<'HTML'
+<form data-wpss-form="contact" action="https://forms.example.com/submit" method="post" accept-charset="UTF-8">
+<input type="hidden" name="_wpss_form_id" value="contact">
+<input name="message">
+</form>
+HTML);
+
+        $report = (new BuildValidator(
+            $this->dist,
+            'https://wp.internal.example',
+            'https://www.example.com',
+            'https://forms.example.com/submit'
+        ))->validate();
+
+        self::assertTrue($report->isSuccessful());
+        self::assertSame([], $report->issues());
+    }
+
+    public function testReportsUnmarkedFormEvenWhenItTargetsConfiguredSubmissionEndpoint(): void
+    {
+        file_put_contents($this->dist . '/index.html', '<form action="https://forms.example.com/submit" method="post"><input name="message"></form>');
+
+        $report = (new BuildValidator(
+            $this->dist,
+            'https://wp.internal.example',
+            'https://www.example.com',
+            'https://forms.example.com/submit'
+        ))->validate();
+
+        self::assertSame(1, $report->warningCount());
+        self::assertSame('unsupported_dynamic_behavior', $report->issues()[0]['type']);
+    }
+
+    public function testReportsMarkedFormWithMalformedOrUnexpectedAction(): void
+    {
+        file_put_contents($this->dist . '/index.html', <<<'HTML'
+<form data-wpss-form="contact" action="javascript:submit()" method="post">
+<input type="hidden" name="_wpss_form_id" value="contact">
+<input name="message">
+</form>
+HTML);
+
+        $report = (new BuildValidator(
+            $this->dist,
+            'https://wp.internal.example',
+            'https://www.example.com',
+            'https://forms.example.com/submit'
+        ))->validate();
+
+        self::assertSame(1, $report->warningCount());
+        self::assertSame('javascript:submit()', $report->issues()[0]['reference']);
+    }
+
+    public function testReportsMarkedFormWhenRewriteInvariantsAreIncomplete(): void
+    {
+        file_put_contents($this->dist . '/index.html', <<<'HTML'
+<form data-wpss-form="contact" action="https://forms.example.com/submit" method="get">
+<input type="hidden" name="_wpss_form_id" value="other-form">
+<input name="message">
+</form>
+HTML);
+
+        $report = (new BuildValidator(
+            $this->dist,
+            'https://wp.internal.example',
+            'https://www.example.com',
+            'https://forms.example.com/submit'
+        ))->validate();
+
+        self::assertSame(1, $report->warningCount());
+        self::assertSame('unsupported_dynamic_behavior', $report->issues()[0]['type']);
+    }
+
+    public function testRejectsMalformedConfiguredSubmissionEndpoint(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Submission endpoint must be an absolute HTTP(S) URL.');
+
+        new BuildValidator($this->dist, 'https://wp.internal.example', 'https://www.example.com', '/submit');
     }
 
     public function testReportsUnsupportedDynamicBehaviorWithoutTreatingItAsStaticFallback(): void
