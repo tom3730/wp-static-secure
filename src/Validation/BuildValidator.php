@@ -277,7 +277,8 @@ final class BuildValidator
             && in_array(strtolower((string) ($parts['scheme'] ?? '')), ['http', 'https'], true)
             && isset($parts['host'])
             && $parts['host'] !== ''
-            && !isset($parts['user'], $parts['pass']);
+            && !isset($parts['user'])
+            && !isset($parts['pass']);
     }
 
     private function isTextOutput(string $extension): bool
