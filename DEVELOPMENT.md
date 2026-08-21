@@ -41,13 +41,11 @@ From a clean checkout, with Composer 2 and the PHP `zip` extension available:
 php scripts/package-plugin.php
 ```
 
-The default artifact is written to:
+The artifact is written to the fixed build path:
 
 ```text
 build/wp-static-secure.zip
 ```
-
-An alternate output path may be supplied as the first argument.
 
 Packaging is allowlist-based. The ZIP contains the plugin bootstrap, `src/`, runtime CLI files in `bin/`, `composer.json`, and the production `vendor/` tree prepared with `composer install --no-dev --classmap-authoritative`. Development-only material such as `.git`, `.github/`, `tests/`, `scripts/`, PHPUnit configuration, development documentation, and local build output is not copied into the package.
 
