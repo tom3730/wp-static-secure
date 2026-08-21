@@ -9,7 +9,7 @@ return [
     ],
     'https://wp.internal.example/contact/' => [
         'text/html; charset=UTF-8',
-        '<!doctype html><html><head><link rel="stylesheet" href="https://wp.internal.example/assets/site.css"></head><body><nav><a href="https://wp.internal.example/">Home</a></nav><h1>Contact</h1><form data-wpss-form="contact" action="https://wp.internal.example/wp-admin/admin-post.php" method="post"><input type="hidden" name="action" value="legacy_contact"><input type="email" name="email"><textarea name="message"></textarea><button type="submit">Send</button></form></body></html>',
+        '<!doctype html><html><head><link rel="stylesheet" href="https://wp.internal.example/assets/site.css"></head><body><nav><a href="https://wp.internal.example/">Home</a></nav><h1>Contact</h1><form data-wpss-form="contact" action="https://wp.internal.example/wp-admin/admin-post.php" method="post"><input type="email" name="email"><textarea name="message"></textarea><button type="submit">Send</button></form></body></html>',
     ],
     'https://wp.internal.example/assets/site.css' => [
         'text/css',
