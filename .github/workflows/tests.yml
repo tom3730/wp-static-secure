@@ -110,3 +110,27 @@ jobs:
         run: |
           wp plugin activate wp-static-secure --path="$WP_PATH"
           wp plugin status wp-static-secure --path="$WP_PATH"
+
+      - name: Verify submission persistence
+        env:
+          WP_PATH: /tmp/wordpress
+        run: |
+          wp eval '
+          global $wpdb;
+          $table = $wpdb->prefix . "wpss_submissions";
+          if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table)) !== $table) {
+              throw new RuntimeException("Submission table was not installed.");
+          }
+          $store = new WPStaticSecure\Forms\WordPressSubmissionStore($wpdb);
+          $store->save(new WPStaticSecure\Forms\Submission("contact", ["email" => "ci@example.test", "message" => "hello"]));
+          $rows = $store->list(WPStaticSecure\Forms\SubmissionStatus::NEW);
+          if (count($rows) !== 1 || $rows[0]->formId() !== "contact") {
+              throw new RuntimeException("Submission was not persisted for the inbox.");
+          }
+          if (!$store->updateStatus($rows[0]->id(), WPStaticSecure\Forms\SubmissionStatus::DONE)) {
+              throw new RuntimeException("Submission status was not updated.");
+          }
+          if ($store->find($rows[0]->id())?->status() !== WPStaticSecure\Forms\SubmissionStatus::DONE) {
+              throw new RuntimeException("Updated submission status was not readable.");
+          }
+          ' --path="$WP_PATH"
