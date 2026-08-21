@@ -111,7 +111,7 @@ jobs:
           wp plugin activate wp-static-secure --path="$WP_PATH"
           wp plugin status wp-static-secure --path="$WP_PATH"
 
-      - name: Verify submission persistence
+      - name: Verify Phase 7 submission reaches Inbox storage
         env:
           WP_PATH: /tmp/wordpress
         run: |
@@ -122,10 +122,19 @@ jobs:
               throw new RuntimeException("Submission table was not installed.");
           }
           $store = new WPStaticSecure\Forms\WordPressSubmissionStore($wpdb);
-          $store->save(new WPStaticSecure\Forms\Submission("contact", ["email" => "ci@example.test", "message" => "hello"]));
+          $definition = new WPStaticSecure\Forms\FormDefinition("contact", ["email", "message"]);
+          $endpoint = new WPStaticSecure\Forms\SubmissionEndpoint(
+              $store,
+              ["http://example.test"],
+              [["adapter" => new WPStaticSecure\Forms\GenericHtmlFormAdapter(), "definition" => $definition]]
+          );
+          $endpoint->submit(
+              ["_wpss_form_id" => "contact", "email" => "ci@example.test", "message" => "hello"],
+              "http://example.test"
+          );
           $rows = $store->list(WPStaticSecure\Forms\SubmissionStatus::NEW);
-          if (count($rows) !== 1 || $rows[0]->formId() !== "contact") {
-              throw new RuntimeException("Submission was not persisted for the inbox.");
+          if (count($rows) !== 1 || $rows[0]->formId() !== "contact" || $rows[0]->fields()["message"] !== "hello") {
+              throw new RuntimeException("Phase 7 submission was not persisted for the Inbox.");
           }
           if (!$store->updateStatus($rows[0]->id(), WPStaticSecure\Forms\SubmissionStatus::DONE)) {
               throw new RuntimeException("Submission status was not updated.");
