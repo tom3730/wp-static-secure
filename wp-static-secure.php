@@ -21,5 +21,8 @@ if (! is_readable($autoload)) {
 
 require_once $autoload;
 
-register_activation_hook(__FILE__, [WPStaticSecure\Plugin::class, 'activate']);
+if (function_exists('register_activation_hook')) {
+    register_activation_hook(__FILE__, [WPStaticSecure\Plugin::class, 'activate']);
+}
+
 WPStaticSecure\Plugin::boot();
