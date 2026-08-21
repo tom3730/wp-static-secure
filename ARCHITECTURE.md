@@ -160,6 +160,14 @@ Inbox
    └─ spam
 ```
 
+### MVP WordPress Inbox storage
+
+The MVP WordPress-managed system of record is a dedicated submission table rather than ordinary posts or post meta. It stores the normalized form identifier and fields, submission status, and UTC receipt time. Request metadata such as IP address or User-Agent is not collected by default.
+
+The WordPress admin Inbox is a private authoring capability. Viewing and status changes require an administrative capability, and mutations require WordPress nonces. The Inbox does not add an anonymous REST route, AJAX action, or other public WordPress endpoint.
+
+This storage choice does not change the core dynamic API rule: public form submission must remain a narrow explicit capability and must not become a generic proxy into WordPress. The store is an implementation of the submission-storage boundary, not authorization for arbitrary public-to-WordPress connectivity.
+
 ### Form adapters
 
 Form-plugin compatibility should use an adapter boundary rather than embedding plugin-specific behavior throughout the core.
