@@ -6,11 +6,7 @@ const PACKAGE_DIRECTORY = 'wp-static-secure';
 const FIXED_ZIP_MTIME = 315532800; // 1980-01-01T00:00:00Z, the ZIP epoch.
 
 $root = dirname(__DIR__);
-$output = $argv[1] ?? ($root . '/build/wp-static-secure.zip');
-if (!str_starts_with($output, DIRECTORY_SEPARATOR)) {
-    $output = $root . DIRECTORY_SEPARATOR . $output;
-}
-
+$output = $root . '/build/wp-static-secure.zip';
 $stagingRoot = sys_get_temp_dir() . '/wp-static-secure-package-' . bin2hex(random_bytes(8));
 $pluginRoot = $stagingRoot . DIRECTORY_SEPARATOR . PACKAGE_DIRECTORY;
 
