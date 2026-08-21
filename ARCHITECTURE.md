@@ -74,6 +74,10 @@ The initial dynamic capability is form submission.
 
 A dynamic adapter MUST expose only the minimum operations needed for its feature. It MUST NOT become a generic proxy into WordPress.
 
+The MVP public form transport accepts only bounded `POST` requests using `application/x-www-form-urlencoded`, forwards the request `Origin` into exact-origin validation, and then delegates only to registered form schemas through `SubmissionEndpoint`. Unsupported methods or media types, oversized or malformed bodies, unknown forms, and unknown fields are rejected before persistence.
+
+Rate limiting belongs immediately in front of this transport as a deployment control. The transport does not register a public WordPress REST/AJAX route and does not provide arbitrary forwarding to WordPress. A trusted runtime may write to the configured submission-storage boundary, including the WordPress-managed Inbox store, without making the WordPress HTTP application publicly reachable.
+
 ## Static build pipeline
 
 The core builder should be deterministic and decomposed into stages:
@@ -149,8 +153,10 @@ A form submission is durable application data. Email or chat notification is opt
 ```text
 Static page
    ↓ POST
+Submission HTTP transport
+   ↓ method / content-type / size / form decoding
 Submission endpoint
-   ↓ validate / rate limit / anti-spam
+   ↓ exact Origin / form schema validation
 Submission store
    ↓
 Inbox
@@ -159,6 +165,14 @@ Inbox
    ├─ done
    └─ spam
 ```
+
+### MVP HTTP transport
+
+The generated form action points to an explicitly configured absolute HTTP(S) submission URL. The public runtime maps that request into `SubmissionHttpTransport`, which is intentionally provider-neutral and has no network client, WordPress route registration, or generic RPC behavior.
+
+The transport accepts only `POST` plus `application/x-www-form-urlencoded`, enforces a configurable request-body byte limit, rejects ambiguous/malformed URL-encoded input, and passes the browser `Origin` unchanged to `SubmissionEndpoint`. Accepted submissions are persisted before a success response is returned.
+
+Deployment-specific rate limiting MUST run before the transport. CORS MUST NOT be wildcarded by default; ordinary HTML form POSTs do not require wildcard CORS. If JavaScript access is added, responses may expose CORS headers only for explicitly allowed origins.
 
 ### MVP WordPress Inbox storage
 
