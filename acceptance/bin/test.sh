@@ -10,7 +10,12 @@ for path in / /acceptance-about/ /acceptance-post/ /generic-form/ /cf7-form/; do
   curl --fail --silent --show-error --max-time 10 "$WP_SITE_URL$path" >/dev/null
   echo "PASS: HTTP $path"
 done
-curl --fail --silent "$WP_SITE_URL/acceptance-post/" | grep -q '/acceptance-about/'
-curl --fail --silent "$WP_SITE_URL/acceptance-post/" | grep -q 'acceptance.pdf'
-curl --fail --silent "$WP_SITE_URL/generic-form/" | grep -q 'data-wpss-form="acceptance-contact"'
+post_html="$(curl --fail --silent --show-error --max-time 10 "$WP_SITE_URL/acceptance-post/")"
+[[ "$post_html" == *'/acceptance-about/'* ]] || { echo "FAIL: acceptance post internal link" >&2; exit 1; }
+[[ "$post_html" == *'acceptance.pdf'* ]] || { echo "FAIL: acceptance post PDF link" >&2; exit 1; }
+generic_html="$(curl --fail --silent --show-error --max-time 10 "$WP_SITE_URL/generic-form/")"
+[[ "$generic_html" == *'data-wpss-form="acceptance-contact"'* ]] || { echo "FAIL: generic form marker" >&2; exit 1; }
+echo "PASS: acceptance post internal link"
+echo "PASS: acceptance post PDF link"
+echo "PASS: generic form marker"
 echo "All headless acceptance checks passed."
