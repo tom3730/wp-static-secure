@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 use WPStaticSecure\Forms\ContactForm7Adapter;
 use WPStaticSecure\Forms\FormProcessor;
 use WPStaticSecure\Forms\GenericHtmlFormAdapter;
