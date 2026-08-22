@@ -174,7 +174,7 @@ final class DeploymentPlannerTest extends TestCase
         file_put_contents($this->build . '/index.html', 'hello');
         $build = $this->validatedBuild();
         foreach ([$this->build, $this->boundary, $this->build . '/nested-target'] as $targetRoot) {
-            if ($targetRoot !== $this->build) {
+            if (!is_dir($targetRoot)) {
                 mkdir($targetRoot, 0775, true);
             }
             try {
