@@ -212,6 +212,31 @@ build → dist/
 
 The MVP only needs deterministic local output. Remote deployment belongs behind an interface so it can be added without coupling the crawler to a provider.
 
+Before a transport is allowed to synchronize a target, the core can produce a
+provider-neutral deployment plan from a `ValidatedBuild`, an explicit
+`DeploymentTarget`, and a separately obtained `DeploymentInventory`. A target
+contains only narrow ASCII identity values for the selected destination and
+its root; it does not contain or enumerate a local filesystem. The filesystem
+scanner is a separate adapter that produces the inventory used by tests and
+future local transports.
+
+`ValidatedBuild` binds a successful `BuildValidator` report to one canonical
+output root and an exact relative-path/SHA-256 snapshot. It rejects missing,
+empty, out-of-boundary, or unsafe builds and the planner rechecks the snapshot
+before returning a plan. The planner compares manifests and emits
+deterministic `create`, `update`, `keep`, and `delete` operations sorted by
+relative path.
+
+The plan is inspectable and dry-runnable data. Plan generation has no upload,
+delete, network, or provider side effects. Deletions are calculated only after
+the explicit target identity and root identity have been matched to the
+inventory, and every operation contains only a validated relative path and
+expected hashes. A future S3, rsync, SFTP, or Git executor MUST reverify the
+target identity, source hash, target hash/version, and no-follow containment
+immediately before mutation, aborting on any mismatch. It must not infer a
+target from generated content or turn the planner into a generic
+synchronization API.
+
 ## Security design principles
 
 1. Default-deny public reachability to WordPress.

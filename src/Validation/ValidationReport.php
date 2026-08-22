@@ -7,7 +7,8 @@ namespace WPStaticSecure\Validation;
 final class ValidationReport
 {
     /** @param list<array{severity:string,type:string,file:string,reference?:string,message:string}> $issues */
-    public function __construct(private array $issues)
+    /** @param ?array<string,string> $snapshotEntries */
+    public function __construct(private array $issues, private ?string $outputDirectory = null, private ?array $snapshotEntries = null)
     {
     }
 
@@ -15,6 +16,17 @@ final class ValidationReport
     public function issues(): array
     {
         return $this->issues;
+    }
+
+    public function outputDirectory(): ?string
+    {
+        return $this->outputDirectory;
+    }
+
+    /** @return ?array<string,string> */
+    public function snapshotEntries(): ?array
+    {
+        return $this->snapshotEntries;
     }
 
     public function isSuccessful(): bool

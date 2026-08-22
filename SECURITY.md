@@ -50,6 +50,29 @@ This is an investigation commitment, **not a warranty, insurance policy, inciden
 
 > If our recommended architecture fails, we want to know why.
 
+## Deployment synchronization safety
+
+Deployment deletion is a security-sensitive operation. A deployment
+implementation must validate a non-empty local build before it can calculate
+stale-file deletions. The build must be inside the configured output boundary,
+must pass build validation bound to the same canonical root and exact file
+snapshot, and must not contain symbolic-link escapes or ambiguous relative
+paths.
+
+Deletion planning must also require an explicit target identity and root
+identity plus a separately obtained target inventory. The identity must be
+checked against the operator-selected target before any deletion set is
+computed; it must never be inferred from generated files or untrusted
+content. All planned paths must be validated relative paths. A deployment
+plan should be inspectable/dry-runnable, deterministic, and separate from the
+provider transport so that unsafe plans fail before any remote mutation is
+attempted.
+
+An eventual executor MUST reverify the target identity, source hash, target
+hash or provider version, and no-follow containment immediately before every
+mutation. It must abort on any mismatch or inability to prove the target
+boundary; a plan is not authorization to delete a different target.
+
 ## Security record
 
 The project intends to maintain a transparent security record as it matures.

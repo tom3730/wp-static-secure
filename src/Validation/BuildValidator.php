@@ -39,12 +39,15 @@ final class BuildValidator
     public function validate(): ValidationReport
     {
         $issues = [];
+        $snapshotEntries = [];
+        $snapshotAvailable = true;
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($this->outputDirectory, FilesystemIterator::SKIP_DOTS)
         );
 
         foreach ($iterator as $file) {
-            if (!$file->isFile()) {
+            if ($file->isLink() || !$file->isFile()) {
+                $snapshotAvailable = false;
                 continue;
             }
 
@@ -52,9 +55,11 @@ final class BuildValidator
             $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($path, strlen($this->outputDirectory) + 1));
             $contents = file_get_contents($path);
             if (!is_string($contents)) {
+                $snapshotAvailable = false;
                 $issues[] = $this->issue('error', 'unreadable_output', $relative, null, 'Generated output could not be read.');
                 continue;
             }
+            $snapshotEntries[$relative] = hash('sha256', $contents);
 
             $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
             if ($this->isTextOutput($extension) && (stripos($contents, $this->authoringOrigin) !== false || $this->containsSchemeRelativeAuthoringOrigin($contents))) {
@@ -72,7 +77,8 @@ final class BuildValidator
             return [$a['file'], $a['severity'], $a['type'], $a['reference'] ?? ''] <=> [$b['file'], $b['severity'], $b['type'], $b['reference'] ?? ''];
         });
 
-        return new ValidationReport($issues);
+        ksort($snapshotEntries, SORT_STRING);
+        return new ValidationReport($issues, $this->outputDirectory, $snapshotAvailable ? $snapshotEntries : null);
     }
 
     /** @return list<array{severity:string,type:string,file:string,reference?:string,message:string}> */
