@@ -1,0 +1,186 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Annotated tag and pre-release name (for example v0.1.0-alpha.1)
+        required: true
+        type: string
+      release_commit:
+        description: Full 40-character commit SHA to release
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Create verified pre-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      RELEASE_COMMIT: ${{ inputs.release_commit }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out release commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.RELEASE_COMMIT }}
+
+      - name: Validate release inputs and source ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$ ]]
+          [[ "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$RELEASE_COMMIT" FETCH_HEAD
+
+      - name: Check release does not already exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "A release already exists for $RELEASE_TAG." >&2
+            exit 1
+          fi
+
+      - name: Locate successful Tests workflow run
+        id: tests-run
+        shell: bash
+        run: |
+          set -euo pipefail
+          runs_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/tests.yml/runs?head_sha=$RELEASE_COMMIT&per_page=100")"
+          run_id="$(jq -r '
+            .workflow_runs
+            | map(select(.event == "push" and .head_branch == "main" and .head_sha == env.RELEASE_COMMIT and .status == "completed" and .conclusion == "success"))
+            | sort_by(.run_number)
+            | reverse
+            | .[0].id // empty
+          ' <<<"$runs_json")"
+          test -n "$run_id"
+          jobs_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?per_page=100")"
+          jq -e '
+            ([.jobs[].name]
+              | sort
+              | . == [
+                  "Packaged WordPress activation smoke",
+                  "Unit (PHP 8.1)",
+                  "Unit (PHP 8.2)",
+                  "Unit (PHP 8.3)",
+                  "Unit (PHP 8.4)"
+                ])
+            and (.jobs | all(.[]; .conclusion == "success"))
+          ' <<<"$jobs_json" >/dev/null
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Set up PHP for package verification
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: zip
+          coverage: none
+
+      - name: Download and verify CI package artifact
+        id: package
+        shell: bash
+        env:
+          TESTS_RUN_ID: ${{ steps.tests-run.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          artifacts_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$TESTS_RUN_ID/artifacts?per_page=100")"
+          jq -e '
+            [.artifacts[] | select(.name == "wp-static-secure-plugin" and .expired == false)]
+            | length == 1
+          ' <<<"$artifacts_json" >/dev/null
+          artifact_id="$(jq -r '
+            .artifacts[]
+            | select(.name == "wp-static-secure-plugin" and .expired == false)
+            | .id
+          ' <<<"$artifacts_json")"
+          test -n "$artifact_id"
+          artifact_sha="$(jq -r --argjson id "$artifact_id" '.artifacts[] | select(.id == $id) | .workflow_run.head_sha // empty' <<<"$artifacts_json")"
+          test "$artifact_sha" = "$RELEASE_COMMIT"
+          mkdir -p /tmp/wp-static-secure-artifact
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id/zip" > /tmp/wp-static-secure-artifact/artifact.zip
+          mapfile -t package_entries < <(unzip -Z1 /tmp/wp-static-secure-artifact/artifact.zip)
+          test "${#package_entries[@]}" -eq 1
+          test "${package_entries[0]}" = "wp-static-secure.zip"
+          unzip -p /tmp/wp-static-secure-artifact/artifact.zip wp-static-secure.zip > /tmp/wp-static-secure-artifact/wp-static-secure.zip
+          php scripts/verify-package.php /tmp/wp-static-secure-artifact/wp-static-secure.zip
+          package_version="$(unzip -p /tmp/wp-static-secure-artifact/wp-static-secure.zip wp-static-secure/wp-static-secure.php | sed -n 's/^ \\* Version: //p')"
+          test "$package_version" = "${RELEASE_TAG#v}"
+          sha256="$(sha256sum /tmp/wp-static-secure-artifact/wp-static-secure.zip | cut -d ' ' -f 1)"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Create or verify annotated tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --refs origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            git fetch origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+            test "$(git cat-file -t "refs/tags/$RELEASE_TAG")" = tag
+            test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_COMMIT"
+          else
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git tag -a "$RELEASE_TAG" "$RELEASE_COMMIT" -m "WP Static Secure $RELEASE_TAG"
+            git push origin "refs/tags/$RELEASE_TAG"
+          fi
+          test "$(git cat-file -t "refs/tags/$RELEASE_TAG")" = tag
+          test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_COMMIT"
+
+      - name: Prepare release notes
+        env:
+          PACKAGE_SHA256: ${{ steps.package.outputs.sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' \
+            'This evaluation-only pre-alpha is for compatibility feedback. It makes no production-readiness or SLA claim.' \
+            '' \
+            'Compatibility is limited to the tested opt-in generic form and conservative Contact Form 7 subset.' \
+            '' \
+            'No remote deployment executor is included.' \
+            '' \
+            'Operators must restrict WordPress from anonymous public access and rate-limit the public form endpoint.' \
+            '' \
+            "Source commit: $RELEASE_COMMIT" \
+            "Artifact SHA-256: $PACKAGE_SHA256" > release-notes.md
+
+      - name: Create GitHub pre-release
+        env:
+          PACKAGE_SHA256: ${{ steps.package.outputs.sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" \
+            "/tmp/wp-static-secure-artifact/wp-static-secure.zip#wp-static-secure.zip (SHA-256: $PACKAGE_SHA256)" \
+            --title "WP Static Secure $RELEASE_TAG" \
+            --notes-file release-notes.md \
+            --prerelease \
+            --verify-tag
+
+      - name: Verify published release and asset digest
+        env:
+          EXPECTED_SHA256: ${{ steps.package.outputs.sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_json="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG")"
+          jq -e --arg tag "$RELEASE_TAG" '(.tag_name == $tag) and (.prerelease == true) and ([.assets[] | select(.name == "wp-static-secure.zip")] | length == 1)' <<<"$release_json" >/dev/null
+          rm -rf /tmp/wp-static-secure-release-check
+          mkdir -p /tmp/wp-static-secure-release-check
+          gh release download "$RELEASE_TAG" --pattern wp-static-secure.zip --dir /tmp/wp-static-secure-release-check
+          test "$(sha256sum /tmp/wp-static-secure-release-check/wp-static-secure.zip | cut -d ' ' -f 1)" = "$EXPECTED_SHA256"
