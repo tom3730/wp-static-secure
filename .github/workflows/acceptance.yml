@@ -1,0 +1,41 @@
+name: Release Acceptance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'acceptance/**'
+      - 'ACCEPTANCE.md'
+      - 'Makefile'
+      - '.github/workflows/acceptance.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'acceptance/**'
+      - 'ACCEPTANCE.md'
+      - 'Makefile'
+      - '.github/workflows/acceptance.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-acceptance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  published-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start disposable release acceptance environment
+        run: make acceptance-up
+      - name: Run headless acceptance checks
+        run: make acceptance-test
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose -f acceptance/docker-compose.yml --env-file acceptance/.env -p wp-static-secure-acceptance logs --no-color || true
+      - name: Destroy disposable environment
+        if: always()
+        run: make acceptance-down
