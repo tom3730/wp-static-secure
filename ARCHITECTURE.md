@@ -196,7 +196,7 @@ FormAdapter
 └─ validate_submission()
 ```
 
-Initial adapters should be deliberately limited. A generic HTML form and Contact Form 7 are likely first targets, but implementation should be driven by tests and issues rather than premature compatibility claims.
+Initial adapters should be deliberately limited. The generic HTML adapter and the conservative Contact Form 7 rendered-form adapter are opt-in and compatibility-tested subsets; neither claims to reproduce arbitrary plugin behavior. Further plugin support should be driven by tests and issues rather than premature compatibility claims.
 
 ## Deployment
 
