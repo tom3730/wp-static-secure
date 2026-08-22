@@ -100,7 +100,7 @@ The current pre-alpha implementation includes the core local publishing and form
 - discovery and export of common HTML/CSS assets, including responsive `srcset` references;
 - rewriting of authoring-site URLs to the configured public site;
 - deterministic build validation for private-origin leaks, broken local references, unsupported WordPress dynamic paths, and supported-form output;
-- an explicit form-adapter boundary with an opt-in generic HTML form adapter;
+- an explicit form-adapter boundary with opt-in generic HTML and conservative Contact Form 7 adapters;
 - rewriting supported forms to a configured absolute HTTP(S) submission endpoint;
 - a bounded `POST` / `application/x-www-form-urlencoded` submission transport with request-size and exact-Origin validation;
 - schema-constrained form submission and durable submission storage;

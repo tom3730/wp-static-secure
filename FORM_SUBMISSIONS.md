@@ -2,9 +2,9 @@
 
 WP Static Secure treats forms as an explicit dynamic capability. A form submission is application data; email, chat, or other notification delivery is not part of submission correctness.
 
-## Initial supported form
+## Initial supported forms
 
-The first adapter is deliberately opt-in. A generic HTML form is supported only when it has a `data-wpss-form` identifier:
+The generic adapter is deliberately opt-in. A generic HTML form is supported only when it has a `data-wpss-form` identifier:
 
 ```html
 <form data-wpss-form="contact">
@@ -16,6 +16,14 @@ The first adapter is deliberately opt-in. A generic HTML form is supported only 
 During static export the form processor rewrites a supported form to an explicitly configured absolute HTTP(S) submission endpoint, forces `method="post"`, and adds a hidden `_wpss_form_id` value. Unmarked forms are left unchanged and are not claimed as supported.
 
 Generated forms contain no private credentials, API keys, WordPress nonces, or privileged endpoint addresses.
+
+Contact Form 7 is supported through the opt-in `ContactForm7Adapter`. The adapter recognizes the server-rendered CF7 subset only when the form has the `wpcf7-form` class, exactly one numeric hidden `_wpcf7` form identifier, and exactly one semantic `_wpcf7_version` matching `5.x.y` or `6.x.y` (for example, `6.0.1`). These are the conservative rendered-markup patterns verified by this project. Missing, malformed, out-of-range, or duplicate identity/version inputs are not recognized and remain visibly unsupported. The identifier `123` is mapped to the WP Static Secure form id `cf7-123`. A representative fixture is maintained at `tests/Fixtures/contact-form-7-rendered.html`.
+
+The supported CF7 subset is deliberately conservative: named scalar `input`, `select`, and `textarea` controls are accepted; file inputs, multi-selects, array-valued names, user-defined hidden fields, and forms without a usable numeric identifier are unsupported. A CF7 form without a recognizable identifier is left unchanged. A recognized form containing an unsupported control fails the build rather than silently dropping that control.
+
+When rewritten, the form receives the same `data-wpss-form` marker and `_wpss_form_id` field as the generic adapter, and its action is replaced with the configured absolute HTTP(S) submission endpoint. CF7 private hidden fields (`_wpcf7*`) and WordPress nonce/private fields are removed, and the CF7 container/form JavaScript hooks are removed so CF7's REST/AJAX handler is not used. The form's `novalidate` flag is removed, and simple `aria-required="true"` attributes on supported scalar controls become native HTML `required` attributes. The adapter does not call CF7, WordPress REST, `admin-ajax.php`, or any other WordPress HTTP endpoint. CF7-specific validation messages, uploads, attachments, mail templates, and other plugin behavior are outside this compatibility claim.
+
+The adapter does not make CF7's separately enqueued JavaScript or CSS assets part of the submission path. Deployments should not rely on CF7 JavaScript validation or plugin-side enhancements after export; the rewritten form is a native HTML form using the WP Static Secure transport.
 
 ## Adapter boundary
 
