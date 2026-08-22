@@ -30,7 +30,7 @@ The initial pin is:
 - theme: Twenty Twenty-Five `1.3`
 - Contact Form 7: `6.1.1`
 
-The release downloader obtains the SHA-256 digest published in GitHub release asset metadata, downloads the asset from the expected repository/tag path, and fails closed unless the computed digest matches. An independently recorded digest may be pinned through `WPS_RELEASE_SHA256`; when present it takes precedence over GitHub metadata.
+Before downloading the plugin, the release verifier requires the GitHub Release to be a published pre-release with the pinned tag, requires the tag to be annotated and to resolve to the pinned source commit, and requires the Release notes to contain that same source commit plus a valid `Artifact SHA-256`. If GitHub asset metadata also exposes a SHA-256 digest, it must agree with the Release notes. The downloaded bytes must then match that digest. An independently recorded digest may additionally be pinned through `WPS_RELEASE_SHA256`; if supplied, it must also agree with the published Release notes.
 
 The plugin is then installed and activated from `/tmp/wp-static-secure.zip` inside the WP-CLI container. Repository `src/`, `vendor/`, or the development plugin tree are never mounted into WordPress as the plugin under test. The only repository bind mount is the read-only `acceptance/` harness used by WP-CLI.
 
@@ -43,7 +43,7 @@ Bootstrap is deterministic/idempotent enough for repeated acceptance runs and cr
 - a PNG media item;
 - a PDF download;
 - an opt-in generic form using `data-wpss-form`;
-- a conservative Contact Form 7 form/page;
+- a conservative Contact Form 7 form/page created through Contact Form 7's own save API;
 - a seeded WP Static Secure Submission Inbox row.
 
 ## Automated checks
