@@ -109,9 +109,9 @@ The current pre-alpha implementation includes the core local publishing and form
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) and [FORM_SUBMISSIONS.md](FORM_SUBMISSIONS.md) for the implemented boundaries and current form behavior.
 
-### Remaining before a first broadly promoted release
+### Remaining before a broadly promoted release
 
-The MVP core being implemented does **not** mean the project is production-ready. Before a broadly promoted release, remaining work includes hardening, realistic end-to-end deployment validation, clearer installation/operator workflows, release packaging and licensing, private vulnerability reporting, and explicit documentation of supported compatibility cases.
+The MVP core being implemented does **not** mean the project is production-ready. The first tagged build is intended to be `0.1.0-alpha.1`, an evaluation-only pre-alpha. Before a broadly promoted release, remaining work includes hardening, realistic end-to-end deployment validation, clearer installation/operator workflows, a dedicated private vulnerability-reporting channel, and explicit documentation of supported compatibility cases.
 
 Deployment-specific controls also remain operator responsibilities where documented, including restricting WordPress itself and applying rate limiting in front of the public form transport.
 
@@ -137,4 +137,4 @@ The project is still under active development and should not yet be presented as
 
 ## License
 
-A permissive/open-source license will be selected before the first public release. Do not assume a license until a `LICENSE` file is committed.
+Licensed under the [Apache License 2.0](LICENSE).

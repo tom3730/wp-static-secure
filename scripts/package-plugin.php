@@ -13,7 +13,7 @@ $pluginRoot = $stagingRoot . DIRECTORY_SEPARATOR . PACKAGE_DIRECTORY;
 try {
     mkdirOrFail($pluginRoot);
 
-    foreach (['wp-static-secure.php', 'composer.json'] as $file) {
+    foreach (['wp-static-secure.php', 'composer.json', 'LICENSE'] as $file) {
         copyFile($root . DIRECTORY_SEPARATOR . $file, $pluginRoot . DIRECTORY_SEPARATOR . $file);
     }
     foreach (['src', 'bin'] as $directory) {

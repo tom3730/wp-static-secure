@@ -90,9 +90,9 @@ A zero count should never be represented as proof of perfect security.
 
 ## Reporting a vulnerability
 
-Before a dedicated private reporting mechanism is configured, do **not** publish exploitable vulnerability details in a public issue.
+Do **not** publish exploitable vulnerability details in a public issue.
 
-For now, contact the repository owner privately through an appropriate GitHub-supported private channel where available. A GitHub private vulnerability reporting workflow should be enabled before the first broadly promoted release, and this section should then be updated with the canonical reporting process.
+Use the repository's [private vulnerability reporting form](https://github.com/tom3730/wp-static-secure/security/advisories/new). This form accepts a private report only while GitHub private vulnerability reporting is enabled. If the form is unavailable, open a public issue containing only the title “Private security contact requested” and no vulnerability or exploit details; a maintainer can then enable or establish the private reporting channel. This fallback is coordination only, not a place to disclose the report.
 
 A useful report includes:
 
@@ -121,7 +121,7 @@ Other security issues are still welcome and will be triaged based on impact and 
 
 ## Supported versions
 
-The project is currently pre-alpha. Until a stable release policy exists, only the latest code on the default branch should be assumed to receive security fixes.
+The project is currently pre-alpha. Only the latest tagged pre-release and the latest code on the default branch should be assumed to receive security fixes; older pre-releases are unsupported.
 
 ## Safe harbor intent
 

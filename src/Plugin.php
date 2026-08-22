@@ -10,7 +10,7 @@ use WPStaticSecure\WordPress\SubmissionTable;
 
 final class Plugin
 {
-    public const VERSION = '0.1.0-dev';
+    public const VERSION = '0.1.0-alpha.1';
 
     public static function boot(): void
     {
