@@ -12,6 +12,7 @@ wp theme install "$WPS_THEME" --version="$WPS_THEME_VERSION" --force --activate
 wp plugin install contact-form-7 --version="$WPS_CF7_VERSION" --force --activate
 
 wp post delete $(wp post list --post_type=post,page --format=ids) --force >/dev/null 2>&1 || true
+wp post delete $(wp post list --post_type=wpcf7_contact_form --format=ids) --force >/dev/null 2>&1 || true
 
 printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' | base64 -d > /tmp/acceptance.png
 cat > /tmp/acceptance.pdf <<'EOF'
@@ -30,7 +31,8 @@ about_id="$(wp post create --post_type=page --post_status=publish --post_title='
 wp post create --post_type=post --post_status=publish --post_title='Acceptance Post' --post_name='acceptance-post' --post_content="<p>Fixture post with an <a href='${WP_SITE_URL}/acceptance-about/'>internal link</a>.</p><img src='${image_url}' alt='Acceptance Image'><p><a href='${pdf_url}'>Acceptance PDF</a></p>" >/dev/null
 wp post create --post_type=page --post_status=publish --post_title='Generic Form' --post_name='generic-form' --post_content='<form data-wpss-form="acceptance-contact"><label>Email <input type="email" name="email" required></label><label>Message <textarea name="message" required></textarea></label><button type="submit">Send</button></form>' >/dev/null
 
-cf7_id="$(wp post create --post_type=wpcf7_contact_form --post_status=publish --post_title='Acceptance CF7' --post_content='<label>Email [email* your-email]</label><label>Message [textarea* your-message]</label>[submit "Send"]' --porcelain)"
+cf7_id="$(wp --user="$WP_ADMIN_USER" eval '$form = wpcf7_save_contact_form(["id" => -1, "title" => "Acceptance CF7", "locale" => "en_US", "form" => "<label>Email [email* your-email]</label>\n<label>Message [textarea* your-message]</label>\n[submit \"Send\"]"]); if (!$form) { fwrite(STDERR, "Unable to create CF7 fixture.\n"); exit(1); } echo $form->id();')"
+case "$cf7_id" in (*[!0-9]*|'') echo "Invalid CF7 fixture id: $cf7_id" >&2; exit 21;; esac
 wp post create --post_type=page --post_status=publish --post_title='CF7 Form' --post_name='cf7-form' --post_content="[contact-form-7 id=\"${cf7_id}\" title=\"Acceptance CF7\"]" >/dev/null
 
 wp eval 'global $wpdb; $store = new WPStaticSecure\\Forms\\WordPressSubmissionStore($wpdb); if (count($store->list(null, 500)) === 0) { $store->save(new WPStaticSecure\\Forms\\Submission("acceptance-contact", ["email" => "acceptance@example.invalid", "message" => "Acceptance fixture"])); }'
