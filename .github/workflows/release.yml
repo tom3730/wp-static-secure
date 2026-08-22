@@ -119,8 +119,13 @@ jobs:
           test "${package_entries[0]}" = "wp-static-secure.zip"
           unzip -p /tmp/wp-static-secure-artifact/artifact.zip wp-static-secure.zip > /tmp/wp-static-secure-artifact/wp-static-secure.zip
           php scripts/verify-package.php /tmp/wp-static-secure-artifact/wp-static-secure.zip
-          package_version="$(unzip -p /tmp/wp-static-secure-artifact/wp-static-secure.zip wp-static-secure/wp-static-secure.php | sed -n 's/^ \\* Version: //p')"
-          test "$package_version" = "${RELEASE_TAG#v}"
+          unzip -p /tmp/wp-static-secure-artifact/wp-static-secure.zip wp-static-secure/wp-static-secure.php > /tmp/wp-static-secure-artifact/wp-static-secure.php
+          package_version="$(sed -n 's/^ \* Version: //p' /tmp/wp-static-secure-artifact/wp-static-secure.php)"
+          expected_version="${RELEASE_TAG#v}"
+          if [[ "$package_version" != "$expected_version" ]]; then
+            printf 'Package version mismatch: expected %s, got %s\n' "$expected_version" "$package_version" >&2
+            exit 1
+          fi
           sha256="$(sha256sum /tmp/wp-static-secure-artifact/wp-static-secure.zip | cut -d ' ' -f 1)"
           echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
 
