@@ -14,6 +14,6 @@ final class PluginBootstrapTest extends TestCase
         require_once dirname(__DIR__, 2) . '/wp-static-secure.php';
 
         self::assertTrue(class_exists(Plugin::class));
-        self::assertSame('0.1.0-dev', Plugin::VERSION);
+        self::assertSame('0.1.0-alpha.1', Plugin::VERSION);
     }
 }

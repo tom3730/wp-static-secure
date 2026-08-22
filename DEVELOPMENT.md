@@ -47,7 +47,7 @@ The artifact is written to the fixed build path:
 build/wp-static-secure.zip
 ```
 
-Packaging is allowlist-based. The ZIP contains the plugin bootstrap, `src/`, runtime CLI files in `bin/`, `composer.json`, and the production `vendor/` tree prepared with `composer install --no-dev --classmap-authoritative`. Development-only material such as `.git`, `.github/`, `tests/`, `scripts/`, PHPUnit configuration, development documentation, and local build output is not copied into the package.
+Packaging is allowlist-based. The ZIP contains the plugin bootstrap, `src/`, runtime CLI files in `bin/`, `composer.json`, `LICENSE`, and the production `vendor/` tree prepared with `composer install --no-dev --classmap-authoritative`. Development-only material such as `.git`, `.github/`, `tests/`, `scripts/`, PHPUnit configuration, development documentation, and local build output is not copied into the package.
 
 Verify a package explicitly with:
 
@@ -78,3 +78,5 @@ The automated acceptance test performs the same architectural check with a repre
 ## WordPress activation smoke test
 
 The GitHub Actions `wordpress-smoke` job builds `build/wp-static-secure.zip`, verifies its contents and reproducibility, installs that ZIP into a real WordPress instance with WP-CLI, activates it, and runs the submission-to-Inbox smoke check against the packaged plugin. CI no longer relies on a symlink to the development checkout for activation coverage.
+
+See [RELEASING.md](RELEASING.md) for the maintainer checklist. Preparing a release PR does not itself create a tag or GitHub Release.

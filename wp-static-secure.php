@@ -2,7 +2,9 @@
 /**
  * Plugin Name: WP Static Secure
  * Description: Static publishing foundation for a restricted WordPress authoring environment.
- * Version: 0.1.0-dev
+ * Version: 0.1.0-alpha.1
+ * License: Apache-2.0
+ * License URI: https://www.apache.org/licenses/LICENSE-2.0
  * Requires PHP: 8.1
  * Author: WP Static Secure contributors
  */

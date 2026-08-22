@@ -34,6 +34,7 @@ $entrySet = array_fill_keys($entries, true);
 $required = [
     'wp-static-secure/wp-static-secure.php',
     'wp-static-secure/composer.json',
+    'wp-static-secure/LICENSE',
     'wp-static-secure/src/Plugin.php',
     'wp-static-secure/vendor/autoload.php',
 ];
@@ -42,6 +43,31 @@ foreach ($required as $entry) {
         fwrite(STDERR, 'Required package entry is missing: ' . $entry . PHP_EOL);
         exit(1);
     }
+}
+
+$bootstrap = file_get_contents('zip://' . $package . '#wp-static-secure/wp-static-secure.php');
+$pluginClass = file_get_contents('zip://' . $package . '#wp-static-secure/src/Plugin.php');
+$composerJson = file_get_contents('zip://' . $package . '#wp-static-secure/composer.json');
+if (!is_string($bootstrap) || !preg_match('/^ \* Version: ([^\r\n]+)$/m', $bootstrap, $headerVersion)) {
+    fwrite(STDERR, "Packaged plugin version header is missing or malformed.\n");
+    exit(1);
+}
+if (!is_string($pluginClass) || !preg_match("/public const VERSION = '([^']+)';/", $pluginClass, $runtimeVersion)) {
+    fwrite(STDERR, "Packaged runtime version is missing or malformed.\n");
+    exit(1);
+}
+if ($headerVersion[1] !== $runtimeVersion[1]) {
+    fwrite(STDERR, 'Packaged version mismatch: header ' . $headerVersion[1] . ' != runtime ' . $runtimeVersion[1] . PHP_EOL);
+    exit(1);
+}
+if (!is_string($composerJson)) {
+    fwrite(STDERR, "Packaged Composer metadata is unreadable.\n");
+    exit(1);
+}
+$composer = json_decode($composerJson, true);
+if (!is_array($composer) || ($composer['license'] ?? null) !== 'Apache-2.0') {
+    fwrite(STDERR, "Packaged Composer license must be Apache-2.0.\n");
+    exit(1);
 }
 
 $forbiddenPrefixes = [

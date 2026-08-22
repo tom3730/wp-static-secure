@@ -1,6 +1,7 @@
 {
   "name": "tom3730/wp-static-secure",
   "description": "Static publishing foundation that keeps WordPress out of the public delivery path.",
+  "license": "Apache-2.0",
   "type": "wordpress-plugin",
   "require": {
     "php": ">=8.1"
