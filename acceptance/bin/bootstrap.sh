@@ -35,7 +35,7 @@ cf7_id="$(wp --user="$WP_ADMIN_USER" eval '$form = wpcf7_save_contact_form(["id"
 case "$cf7_id" in (*[!0-9]*|'') echo "Invalid CF7 fixture id: $cf7_id" >&2; exit 21;; esac
 wp post create --post_type=page --post_status=publish --post_title='CF7 Form' --post_name='cf7-form' --post_content="[contact-form-7 id=\"${cf7_id}\" title=\"Acceptance CF7\"]" >/dev/null
 
-wp eval 'global $wpdb; $store = new WPStaticSecure\\Forms\\WordPressSubmissionStore($wpdb); if (count($store->list(null, 500)) === 0) { $store->save(new WPStaticSecure\\Forms\\Submission("acceptance-contact", ["email" => "acceptance@example.invalid", "message" => "Acceptance fixture"])); }'
+wp eval 'global $wpdb; $store = new WPStaticSecure\Forms\WordPressSubmissionStore($wpdb); if (count($store->list(null, 500)) === 0) { $store->save(new WPStaticSecure\Forms\Submission("acceptance-contact", ["email" => "acceptance@example.invalid", "message" => "Acceptance fixture"])); }'
 
 wp rewrite structure '/%postname%/' --hard >/dev/null
 wp rewrite flush --hard >/dev/null
