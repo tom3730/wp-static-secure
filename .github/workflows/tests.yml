@@ -48,7 +48,7 @@ jobs:
         run: composer test
 
   wordpress-smoke:
-    name: WordPress activation smoke
+    name: Packaged WordPress activation smoke
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -75,12 +75,28 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mysqli, mbstring
+          extensions: mysqli, mbstring, zip
           coverage: none
           tools: composer:v2, wp-cli
 
-      - name: Install plugin dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress --no-dev
+      - name: Build installable plugin package
+        run: php scripts/package-plugin.php
+
+      - name: Verify package contents
+        run: php scripts/verify-package.php build/wp-static-secure.zip
+
+      - name: Verify repeated package build is deterministic
+        run: |
+          cp build/wp-static-secure.zip /tmp/wp-static-secure-first.zip
+          php scripts/package-plugin.php
+          cmp /tmp/wp-static-secure-first.zip build/wp-static-secure.zip
+
+      - name: Upload plugin package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wp-static-secure-plugin
+          path: build/wp-static-secure.zip
+          if-no-files-found: error
 
       - name: Install WordPress
         env:
@@ -102,13 +118,12 @@ jobs:
             --admin_password='ci-only-password' \
             --admin_email=ci@example.test \
             --skip-email
-          ln -s "$GITHUB_WORKSPACE" "$WP_PATH/wp-content/plugins/wp-static-secure"
 
-      - name: Activate plugin
+      - name: Install and activate packaged plugin
         env:
           WP_PATH: /tmp/wordpress
         run: |
-          wp plugin activate wp-static-secure --path="$WP_PATH"
+          wp plugin install "$GITHUB_WORKSPACE/build/wp-static-secure.zip" --activate --path="$WP_PATH"
           wp plugin status wp-static-secure --path="$WP_PATH"
 
       - name: Verify Phase 7 submission reaches Inbox storage
